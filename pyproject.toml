@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "chatgpt-proxy"
+authors = [
+    {name= "18870"}
+]
+requires-python = ">=3.9"
+version = "0.0.1"
+dependencies = [
+    "httpx",
+    "fastapi",
+    "uvicorn"
+]
+description = "Reverse proxy for OpenAI chatgpt website API"
+classifiers = [
+    "Programming Language :: Python :: 3",
+]
+
+[tool.setuptools.package-dir]
+chatgpt_proxy = "chatgpt_proxy"
+
+[tool.setuptools.dynamic]
+readme = {file = ["README.md"]}
