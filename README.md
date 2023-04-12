@@ -3,15 +3,15 @@ Python version of OpenAI's ChatGPT web API proxy
 Python alternative to [ChatGPT-Proxy-V4](https://github.com/acheong08/ChatGPT-Proxy-V4)  
 Use cookie `_puid` to bypass Cloudflare browser check  
 
-# Requirements
+## Requirements
 - ChatGPT plus account
 - Access to chat.openai.com
 
-# Install
+## Install
 `pip install chatgpt-proxy`
 
-# Usage
-## Run as a service
+## Usage
+### Run as a service
 Set these environment variables:
 - `PUID`: Preset cookie `_puid`
 - `ACCESS_TOKEN`: (Optional) For automatic refresh of `_puid`, obtains from [here](https://chat.openai.com/api/auth/session)
@@ -23,7 +23,7 @@ Set these environment variables:
 
 Run: `python -m chatgpt_proxy`
 
-## Integrate into your FastAPI app
+### Integrate into your FastAPI app
 Check out [\_\_main__.py](./chatgpt_proxy/__main__.py)
 ```python
 from chatgpt_proxy import WebChatGPTProxy
@@ -47,8 +47,17 @@ class `WebChatGPTProxy`:
     Default to False, which will only use for refresh puid.
 
 
-# Credits
+## Credits
 - ChatGPT-Proxy-V4
 https://github.com/acheong08/ChatGPT-Proxy-V4
 - Implement reverse proxy in FastAPI
 https://github.com/tiangolo/fastapi/discussions/7382#discussioncomment-5136454
+
+## License
+This work is licensed under the [GNU Affero General Public License v3.0](/LICENSE) or later, with the "CHATGPT-PROXY" exception.
+
+> **"CHATGPT-PROXY" EXCEPTION TO THE AGPL**
+>
+> As a special exception, using this work in the following ways does not cause your program to be covered by the AGPL:
+> 1. Bundling the unaltered code or binary of this work in your program; or
+> 2. Interacting with this work through the provided inter-process communication interface, such as the HTTP API.
