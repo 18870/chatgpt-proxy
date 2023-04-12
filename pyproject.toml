@@ -8,12 +8,13 @@ authors = [
     {name= "18870"}
 ]
 requires-python = ">=3.8"
-version = "0.0.4"
+version = "0.1.0"
 readme = "README.md"
 dependencies = [
     "httpx",
     "fastapi",
-    "uvicorn"
+    "uvicorn",
+    "pydantic[dotenv]"
 ]
 description = "Reverse proxy for OpenAI chatgpt website API"
 classifiers = [

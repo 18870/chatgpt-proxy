@@ -21,7 +21,19 @@ Set these environment variables:
 - `HOST`: (Optional) Listen on host, default to `127.0.0.1`
 - `PORT`: (Optional) Listen on port, default to `7800`
 
-Run: `python -m chatgpt_proxy`
+Or create a `.env` file with your environment variables at where you want to run the proxy:
+```ini
+puid=YOUR_PUID
+access_token=YOUR_ACCESS_TOKEN
+proxy_trust_client=False
+host=127.0.0.1
+port=7800
+```
+
+Note that environment variables will override the values in `.env` file.
+
+Then run: `python -m chatgpt_proxy`
+The proxy will be avaliable at `http://host:port/backend-api/`
 
 ### Integrate into your FastAPI app
 Check out [\_\_main__.py](./chatgpt_proxy/__main__.py)
