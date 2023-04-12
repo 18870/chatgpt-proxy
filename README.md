@@ -32,7 +32,7 @@ port=7800
 
 Note that environment variables will override the values in `.env` file.
 
-Then run: `python -m chatgpt_proxy`
+Then run: `python -m chatgpt_proxy`  
 The proxy will be avaliable at `http://host:port/backend-api/`
 
 ### Integrate into your FastAPI app
@@ -58,6 +58,9 @@ class `WebChatGPTProxy`:
     When set to True, any requests without an access_token will be given the above access_token.
     Default to False, which will only use for refresh puid.
 
+### Behind a http proxy
+Set `HTTP_PROXY` and `HTTPS_PROXY` or `ALL_PROXY` environment variables.   
+This **cannot be set** in `.env` file becauce `httpx` (the package we used to send request) reads from environment variables only. See also [httpx#Proxies](https://www.python-httpx.org/environment_variables/#http_proxy-https_proxy-all_proxy).
 
 ## Credits
 - ChatGPT-Proxy-V4
