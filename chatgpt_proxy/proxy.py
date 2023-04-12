@@ -1,6 +1,5 @@
 import asyncio
 import logging
-from http.cookies import SimpleCookie
 from typing import Optional
 from urllib.parse import urlparse
 
@@ -80,13 +79,14 @@ class ReverseProxy:
         rp_resp = await self.client.send(rp_req, stream=True)
         return rp_resp
 
-    def attach(self, app: FastAPI, path: str) -> None:
+    def attach(self, app: FastAPI, path: str, **kwargs) -> None:
         path = path.rstrip("/")
         app.add_api_route(
             path + "/{path:path}",
             self.proxy,
             methods=self.ALL_METHODS,
             description=f"Reverse proxy of {self.base_url}",
+            **kwargs,
         )
 
 
@@ -159,6 +159,6 @@ class WebChatGPTProxy(ReverseProxy):
             await asyncio.sleep(60 * 60 * 6)
 
     def attach(self, app: FastAPI, path: str) -> None:
-        super().attach(app=app, path=path)
+        super().attach(app=app, path=path, include_in_schema=self.trust)
         self._app = app
         self._path = path
