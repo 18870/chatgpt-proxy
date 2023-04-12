@@ -9,6 +9,7 @@ authors = [
 ]
 requires-python = ">=3.8"
 version = "0.0.4"
+readme = "README.md"
 dependencies = [
     "httpx",
     "fastapi",
@@ -21,6 +22,3 @@ classifiers = [
 
 [tool.setuptools.package-dir]
 chatgpt_proxy = "chatgpt_proxy"
-
-[tool.setuptools.dynamic]
-readme = {file = ["README.md"]}
