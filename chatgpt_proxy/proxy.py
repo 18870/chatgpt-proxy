@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from typing import Optional
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlunparse, ParseResult
 
 import httpx
 from fastapi import FastAPI
@@ -29,7 +29,17 @@ class ReverseProxy:
         self.base_url = base_url
         self.client = httpx.AsyncClient(base_url=base_url)
         _url = urlparse(base_url)
-        self.domain = _url.netloc
+        self._domain = _url.netloc
+        self._origin = urlunparse(
+            ParseResult(
+                scheme=_url.scheme,
+                netloc=_url.netloc,
+                path="",
+                params="",
+                query="",
+                fragment="",
+            )
+        )
 
     async def _prepare_cookies(self, request: Request):
         return request.cookies.copy()
@@ -43,8 +53,8 @@ class ReverseProxy:
         headers.pop("cookie", None)
 
         # preset header
-        headers["host"] = self.domain
-        headers["origin"] = self.base_url
+        headers["host"] = self._domain
+        headers["origin"] = self._origin
         headers["referer"] = self.base_url
         return headers
 
@@ -143,7 +153,9 @@ class WebChatGPTProxy(ReverseProxy):
                 logger.info(f"puid: {puid}")
                 self.puid = puid
             else:
-                logger.info("puid not found")
+                logger.error("Failed to refresh puid")
+                logger.error(f"Cookies: {resp.cookies}")
+                logger.error(f"Response: \n{resp.text}")
 
     async def _refresh_task(self) -> None:
         if self.access_token is None:
