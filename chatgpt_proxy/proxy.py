@@ -13,14 +13,6 @@ from starlette.responses import StreamingResponse
 logger = logging.getLogger(__name__)
 
 
-def parse_set_cookie(headers: httpx.Headers) -> SimpleCookie:
-    cookies = SimpleCookie()
-    for key, value in headers.raw:
-        if key.lower() == b'set-cookie':
-            cookies.load(value.decode("utf-8"))
-    return cookies
-
-
 class ReverseProxy:
     ALL_METHODS = [
         "GET",
@@ -69,7 +61,6 @@ class ReverseProxy:
         )
 
         # Handle Set-Cookie headers
-        cookies = parse_set_cookie(rp_resp.headers)
         headers = rp_resp.headers.copy()
         headers.pop("set-cookie", None)
 
@@ -79,18 +70,8 @@ class ReverseProxy:
             headers=headers,
         )
 
-        for key, morsel in cookies.items():
-            resp.set_cookie(
-                key,
-                morsel.value,
-                max_age=morsel.get("max-age", None),
-                expires=morsel.get("expires", None),
-                path=morsel.get("path", "/"),
-                domain=morsel.get("domain", None),
-                secure=morsel.get("secure", False),
-                httponly=morsel.get("httponly", False),
-                samesite=morsel.get("samesite", 'lax'),
-            )
+        for key, value in rp_resp.cookies.items():
+            resp.set_cookie(key=key, value=value)
         return resp
 
     async def _send_request(self, path: str, query: bytes, **kwargs) -> httpx.Response:
@@ -152,16 +133,15 @@ class WebChatGPTProxy(ReverseProxy):
         if self._app is None:
             logger.info("Not attached to any FastAPI app, skip refresh")
         async with httpx.AsyncClient(
-            app=self._app, base_url=f"http://app{self._path}"
+            app=self._app, base_url=f"https://chat.openai.com{self._path}"
         ) as client:
             resp = await client.get(
                 "/models", headers={"authorization": f"Bearer {self.access_token}"}
             )
-            cookies = parse_set_cookie(resp.headers)
-            puid = cookies.get("_puid")
+            puid = resp.cookies.get("_puid")
             if puid:
-                logger.info(f"puid: {puid.value}")
-                self.puid = puid.value
+                logger.info(f"puid: {puid}")
+                self.puid = puid
             else:
                 logger.info("puid not found")
 
@@ -182,5 +162,3 @@ class WebChatGPTProxy(ReverseProxy):
         super().attach(app=app, path=path)
         self._app = app
         self._path = path
-
-

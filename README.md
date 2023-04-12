@@ -15,6 +15,9 @@ Use cookie `_puid` to bypass Cloudflare browser check
 Set these environment variables:
 - `PUID`: Preset cookie `_puid`
 - `ACCESS_TOKEN`: (Optional) For automatic refresh of `_puid`, obtains from [here](https://chat.openai.com/api/auth/session)
+- `PROXY_TRUST_CLIENT`: (Optional) Trust requests from any client.  
+    When set to `True`, any requests without an access_token will be given the above access_token.  
+    Default to `False`, which will only use for refresh puid.
 - `HOST`: (Optional) Listen on host, default to `127.0.0.1`
 - `PORT`: (Optional) Listen on port, default to `7800`
 
@@ -36,10 +39,10 @@ app = FastAPI(lifespan=lifespan)
 proxy.attach(app, path="/backend-api")
 ```
 
-`WebChatGPTProxy`:
+class `WebChatGPTProxy`:
 - `puid`: Preset cookie `_puid`
 - `access_token`: (Optional), for automatic refresh of `_puid`
-- `trust`: Trust requests from anyclient.
+- `trust`: Trust requests from any client.
     When set to True, any requests without an access_token will be given the above access_token.
     Default to False, which will only use for refresh puid.
 

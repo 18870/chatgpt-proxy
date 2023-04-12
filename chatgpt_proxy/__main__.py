@@ -19,8 +19,9 @@ if __name__ == "__main__":
     ACCESS_TOKEN = os.environ.get("ACCESS_TOKEN")
     HOST = os.environ.get("HOST", "127.0.0.1")
     PORT = int(os.environ.get("PORT", 7800))
+    TRUST = os.environ.get("PROXY_TRUST_CLIENT", "False").lower() == "true"
 
-    proxy = WebChatGPTProxy(puid=PUID, access_token=ACCESS_TOKEN, trust=False)
+    proxy = WebChatGPTProxy(puid=PUID, access_token=ACCESS_TOKEN, trust=TRUST)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
