@@ -102,7 +102,7 @@ class ReverseProxy:
 
 class WebChatGPTProxy(ReverseProxy):
     def __init__(
-        self, puid: str, access_token: Optional[str] = None, trust: bool = False
+        self, cf_clearance: str, user_agent: str, access_token: Optional[str] = None, trust: bool = False
     ) -> None:
         """
         :param puid: from `_puid` cookie
@@ -114,7 +114,8 @@ class WebChatGPTProxy(ReverseProxy):
                       Default to False, which will only use for refresh puid.
         """
         super().__init__(base_url="https://chat.openai.com/backend-api/")
-        self.puid = puid
+        self.cf_clearance = cf_clearance
+        self.ua = user_agent
         self.access_token = access_token
         self.trust = trust
         self._app: Optional[FastAPI] = None
@@ -122,16 +123,14 @@ class WebChatGPTProxy(ReverseProxy):
 
     async def _prepare_cookies(self, request: Request):
         cookies = await super()._prepare_cookies(request)
-        cookies.setdefault("_puid", self.puid)
+        cookies.setdefault("cf_clearance", self.cf_clearance)
         return cookies
 
     async def _prepare_headers(self, request: Request):
         headers = await super()._prepare_headers(request)
         headers["origin"] = "https://chat.openai.com"
         headers["referer"] = "https://chat.openai.com/chat"
-        headers[
-            "user-agent"
-        ] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36 Edg/111.0.1661.54"
+        headers["user-agent"] = self.ua
         if self.trust and self.access_token:
             headers.setdefault("authorization", f"Bearer {self.access_token}")
         return headers
@@ -139,9 +138,11 @@ class WebChatGPTProxy(ReverseProxy):
     async def _refresh_puid(self) -> None:
         """
         Send requests to /models through reverse proxy (current FastAPI app) to get a new puid
+        
+        Use to see if you pass cloudflare
         """
         if self._app is None:
-            logger.info("Not attached to any FastAPI app, skip refresh")
+            logger.info("Not attached to any FastAPI app, skip")
         async with httpx.AsyncClient(
             app=self._app, base_url=f"https://chat.openai.com{self._path}"
         ) as client:
@@ -153,22 +154,22 @@ class WebChatGPTProxy(ReverseProxy):
                 logger.info(f"puid: {puid}")
                 self.puid = puid
             else:
-                logger.error("Failed to refresh puid")
+                logger.error("Failed to get puid")
                 logger.error(f"Cookies: {resp.cookies}")
                 logger.error(f"Response: \n{resp.text}")
 
     async def _refresh_task(self) -> None:
         if self.access_token is None:
-            logger.info("access_token not found, skip refresh")
+            logger.info("access_token not found, skip")
             return
-        while True:
-            try:
-                await self._refresh_puid()
-            except Exception as e:
-                logger.exception(e)
-                await asyncio.sleep(60 * 60)
-                continue
-            await asyncio.sleep(60 * 60 * 6)
+
+        try:
+            await self._refresh_puid()
+        except Exception as e:
+            logger.exception(e)
+            # await asyncio.sleep(60 * 60)
+            # continue
+        # await asyncio.sleep(60 * 60 * 6)
 
     def attach(self, app: FastAPI, path: str) -> None:
         super().attach(app=app, path=path, include_in_schema=self.trust)

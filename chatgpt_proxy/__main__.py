@@ -17,7 +17,9 @@ logging.basicConfig(
 
 
 class Settings(BaseSettings):
-    puid: str
+    cf_clearance: str
+    user_agent: str
+
     access_token: str = None
     host: str = "127.0.0.1"
     port: int = 7800
@@ -30,7 +32,8 @@ class Settings(BaseSettings):
 if __name__ == "__main__":
     env = Settings()
     proxy = WebChatGPTProxy(
-        puid=env.puid,
+        cf_clearance=env.cf_clearance,
+        user_agent=env.user_agent,
         access_token=env.access_token,
         trust=env.trust,
     )

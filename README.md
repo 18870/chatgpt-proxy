@@ -1,10 +1,11 @@
 # ChatGPT-Proxy
 Python version of OpenAI's ChatGPT web API proxy  
-Python alternative to [ChatGPT-Proxy-V4](https://github.com/acheong08/ChatGPT-Proxy-V4)  
-Use cookie `_puid` to bypass Cloudflare browser check  
+Python alternative of [ChatGPT-Proxy-V4](https://github.com/acheong08/ChatGPT-Proxy-V4)  
+Use cookie `cf_clearance` to pass Cloudflare browser check  
+
+**`_puid` no longer works**
 
 ## Requirements
-- ChatGPT plus account
 - Access to chat.openai.com
 
 ## Install
@@ -13,8 +14,9 @@ Use cookie `_puid` to bypass Cloudflare browser check
 ## Usage
 ### Run as a service
 Set these environment variables:
-- `PUID`: Preset cookie `_puid`
-- `ACCESS_TOKEN`: (Optional) For automatic refresh of `_puid`, obtains from [here](https://chat.openai.com/api/auth/session)
+- `CF_CLEARANCE`: Cookie `cf_clearance`
+- `USER_AGENT`: User-agent of your browser when you get the cookie `cf_clearance`
+- `ACCESS_TOKEN`: (Optional) Obtains from [here](https://chat.openai.com/api/auth/session)
 - `PROXY_TRUST_CLIENT`: (Optional) Trust requests from any client.  
     When set to `True`, any requests without an access_token will be given the above access_token.  
     Default to `False`, which will only use for refresh puid.
@@ -23,7 +25,8 @@ Set these environment variables:
 
 Or create a `.env` file with your environment variables at where you want to run the proxy:
 ```ini
-puid=YOUR_PUID
+cf_clearance=YOUR_CF_CLEARANCE
+user_agent=YOUR_USER_AGENT
 access_token=YOUR_ACCESS_TOKEN
 proxy_trust_client=False
 host=127.0.0.1
@@ -33,32 +36,34 @@ port=7800
 Note that environment variables will override the values in `.env` file.
 
 Then run: `python -m chatgpt_proxy`  
-The proxy will be avaliable at `http://host:port/backend-api/`
+
+#### Success
+If you see this in console:
+`2023-01-01 00:00:00,000 - chatgpt_proxy.proxy - INFO - puid: user-xxxxxx`
+You are ready to go
+
+The proxy is avaliable at `http://host:port/backend-api/`
 
 ### Integrate into your FastAPI app
 Check out [\_\_main__.py](./chatgpt_proxy/__main__.py)
 ```python
 from chatgpt_proxy import WebChatGPTProxy
-proxy = WebChatGPTProxy(puid=PUID, access_token=ACCESS_TOKEN, trust=False)
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # add this to start refresh puid task
-    refresh_puid_task = asyncio.create_task(proxy._refresh_task())
-    yield
-
-app = FastAPI(lifespan=lifespan)
+proxy = WebChatGPTProxy(cf_clearance=CF_CLEARANCE, user_agent=USER_AGENT, access_token=ACCESS_TOKEN, trust=False)
+app = FastAPI()
 proxy.attach(app, path="/backend-api")
 ```
 
 class `WebChatGPTProxy`:
-- `puid`: Preset cookie `_puid`
-- `access_token`: (Optional), for automatic refresh of `_puid`
-- `trust`: Trust requests from any client.
+- `cf_clearance`: Cookie `cf_clearance`
+- `user_agent`: User-agent of your browser when you get the cookie `cf_clearance`
+- `access_token`: (Optional)
+- `trust`: (Optional) Trust requests from any client.
     When set to True, any requests without an access_token will be given the above access_token.
     Default to False, which will only use for refresh puid.
 
 ### Behind a http proxy
+**You need to use the same ip address you used to get the cookie `cf_clearance`**
+
 Set `HTTP_PROXY` and `HTTPS_PROXY` or `ALL_PROXY` environment variables.   
 This **cannot be set** in `.env` file becauce `httpx` (the package we used to send request) reads from environment variables only. See also [httpx#Proxies](https://www.python-httpx.org/environment_variables/#http_proxy-https_proxy-all_proxy).
 
