@@ -1,11 +1,10 @@
 import asyncio
 import logging
-import os
 from contextlib import asynccontextmanager
 
 import uvicorn
-from fastapi import FastAPI
-from pydantic import BaseSettings, Field
+from fastapi import FastAPI, Header
+from pydantic import BaseModel, BaseSettings, Field
 
 from chatgpt_proxy.proxy import WebChatGPTProxy
 
@@ -14,6 +13,8 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[logging.StreamHandler()],
 )
+
+logger = logging.getLogger(__name__)
 
 
 class Settings(BaseSettings):
@@ -24,6 +25,7 @@ class Settings(BaseSettings):
     host: str = "127.0.0.1"
     port: int = 7800
     trust: bool = Field(default=False, env="proxy_trust_client")
+    mod_access_token: str = None
 
     class Config:
         env_file = '.env'
@@ -45,5 +47,27 @@ if __name__ == "__main__":
 
     app = FastAPI(lifespan=lifespan)
     proxy.attach(app, path="/backend-api")
+
+    if env.mod_access_token:
+        logger.info("Mod access token found, enable /moderation/update_info endpoint")
+
+        class Info(BaseModel):
+            cf_clearance: str = None
+            access_token: str = None
+
+        @app.post("/moderation/update_info", status_code=200)
+        async def update_info(info: Info, authorization: str = Header(...)):
+            if authorization == env.mod_access_token:
+                if info.access_token:
+                    logger.info("New access token found")
+                    proxy.access_token = info.access_token
+                if info.cf_clearance:
+                    logger.info(f"New cf_clearance: {info.cf_clearance}")
+                    proxy.cf_clearance = info.cf_clearance
+            if await proxy._refresh_puid():
+                logger.info("New info is validated")
+            else:
+                logger.error("Failed to validate new info")
+            return {"status": "ok"}
 
     uvicorn.run(app, host=env.host, port=env.port)

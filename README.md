@@ -12,6 +12,9 @@ Use cookie `cf_clearance` to pass Cloudflare browser check
 `pip install chatgpt-proxy`
 
 ## Usage
+
+For how to get a usable `cf_clearance` cookie, checkout issue [#1](https://github.com/18870/chatgpt-proxy/issues/1) (Chinese only sorry)
+
 ### Run as a service
 Set these environment variables:
 - `CF_CLEARANCE`: Cookie `cf_clearance`
@@ -22,6 +25,8 @@ Set these environment variables:
     Default to `False`, which will only use for refresh puid.
 - `HOST`: (Optional) Listen on host, default to `127.0.0.1`
 - `PORT`: (Optional) Listen on port, default to `7800`
+- `MOD_ACCESS_TOKEN`: (Optional) Update info like cf_clearance through http request 
+    requires you set this access_token in `Authorization` Header 
 
 Or create a `.env` file with your environment variables at where you want to run the proxy:
 ```ini
@@ -31,6 +36,7 @@ access_token=YOUR_ACCESS_TOKEN
 proxy_trust_client=False
 host=127.0.0.1
 port=7800
+mod_access_token=YOUR_MOD_ACCESS_TOKEN
 ```
 
 Note that environment variables will override the values in `.env` file.

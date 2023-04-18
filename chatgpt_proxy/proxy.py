@@ -1,4 +1,3 @@
-import asyncio
 import logging
 from typing import Optional
 from urllib.parse import urlparse, urlunparse, ParseResult
@@ -60,6 +59,7 @@ class ReverseProxy:
 
     async def proxy(self, request: Request, path: str):
         # https://github.com/tiangolo/fastapi/discussions/7382#discussioncomment-5136454
+        logger.info(f"Proxying {request.method} {request.url}")
         rp_resp = await self._send_request(
             path=path,
             query=request.url.query.encode("utf-8"),
@@ -129,13 +129,13 @@ class WebChatGPTProxy(ReverseProxy):
     async def _prepare_headers(self, request: Request):
         headers = await super()._prepare_headers(request)
         headers["origin"] = "https://chat.openai.com"
-        headers["referer"] = "https://chat.openai.com/chat"
+        headers["referer"] = "https://chat.openai.com"
         headers["user-agent"] = self.ua
         if self.trust and self.access_token:
             headers.setdefault("authorization", f"Bearer {self.access_token}")
         return headers
 
-    async def _refresh_puid(self) -> None:
+    async def _refresh_puid(self) -> bool:
         """
         Send requests to /models through reverse proxy (current FastAPI app) to get a new puid
         
@@ -151,12 +151,14 @@ class WebChatGPTProxy(ReverseProxy):
             )
             puid = resp.cookies.get("_puid")
             if puid:
-                logger.info(f"puid: {puid}")
+                logger.info(f"puid: {puid[:15]}...{puid[30:40]}...")
                 self.puid = puid
+                return True
             else:
                 logger.error("Failed to get puid")
                 logger.error(f"Cookies: {resp.cookies}")
                 logger.error(f"Response: \n{resp.text}")
+                return False
 
     async def _refresh_task(self) -> None:
         if self.access_token is None:
