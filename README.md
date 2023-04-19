@@ -17,9 +17,11 @@ For how to get a usable `cf_clearance` cookie, checkout issue [#1](https://githu
 
 ### Run as a service
 Set these environment variables:
-- `CF_CLEARANCE`: Cookie `cf_clearance`
-- `USER_AGENT`: User-agent of your browser when you get the cookie `cf_clearance`
+- `CF_CLEARANCE`: (Optional) Cookie `cf_clearance`
+- `USER_AGENT`: (Optional) User-agent of your browser when you get the cookie `cf_clearance`
 - `ACCESS_TOKEN`: (Optional) Obtains from [here](https://chat.openai.com/api/auth/session)
+- `PUID`: (Optional) Cookie `_puid`, still needed to start a conversation for plus account (?)
+    When set a plus account's access_token, this can be automatically refresh
 - `PROXY_TRUST_CLIENT`: (Optional) Trust requests from any client.  
     When set to `True`, any requests without an access_token will be given the above access_token.  
     Default to `False`, which will only use for refresh puid.
@@ -33,6 +35,7 @@ Or create a `.env` file with your environment variables at where you want to run
 cf_clearance=YOUR_CF_CLEARANCE
 user_agent=YOUR_USER_AGENT
 access_token=YOUR_ACCESS_TOKEN
+puid=ANY_VALID_PUID
 proxy_trust_client=False
 host=127.0.0.1
 port=7800
@@ -63,6 +66,7 @@ class `WebChatGPTProxy`:
 - `cf_clearance`: Cookie `cf_clearance`
 - `user_agent`: User-agent of your browser when you get the cookie `cf_clearance`
 - `access_token`: (Optional)
+- `puid`: (Optional)
 - `trust`: (Optional) Trust requests from any client.
     When set to True, any requests without an access_token will be given the above access_token.
     Default to False, which will only use for refresh puid.

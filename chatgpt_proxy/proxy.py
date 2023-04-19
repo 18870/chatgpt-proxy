@@ -115,13 +115,16 @@ class WebChatGPTProxy(ReverseProxy):
         cf_clearance: str,
         user_agent: str,
         access_token: Optional[str] = None,
+        puid: Optional[str] = None,
         trust: bool = False,
     ) -> None:
         """
-        :param puid: from `_puid` cookie
+        :param cf_clearance: from `cf_clearance` cookie
+        :param user_agent: from `user-agent` header
         :param access_token: from openai `access_token`
                              obtained from here https://chat.openai.com/api/auth/session
                              Used to refresh puid
+        :param puid: from `_puid` cookie
         :param trust: Trust requests from any client.
                       When set to True, any requests without an access_token will be given the above access_token.
                       Default to False, which will only use for refresh puid.
@@ -130,6 +133,7 @@ class WebChatGPTProxy(ReverseProxy):
         self.cf_clearance = cf_clearance
         self.user_agent = user_agent
         self.access_token = access_token
+        self.puid = puid
         self.trust = trust
         self._app: Optional[FastAPI] = None
         self._path: Optional[str] = None
@@ -138,6 +142,7 @@ class WebChatGPTProxy(ReverseProxy):
     async def _prepare_cookies(self, request: Request):
         cookies = await super()._prepare_cookies(request)
         cookies.setdefault("cf_clearance", self.cf_clearance)
+        cookies.setdefault("_puid", self.puid)
         return cookies
 
     async def _prepare_headers(self, request: Request):
@@ -181,15 +186,12 @@ class WebChatGPTProxy(ReverseProxy):
                 return False
 
     async def _refresh_task(self) -> None:
-        """
-        Deprecated
-        """
         if self.access_token is None:
             logger.info("access_token not found, skip")
             return
 
         try:
-            await self._refresh_puid()
+            await self.check_cf()
         except Exception as e:
             logger.exception(e)
             # await asyncio.sleep(60 * 60)
@@ -202,9 +204,15 @@ class WebChatGPTProxy(ReverseProxy):
         async with httpx.AsyncClient(
             app=self._app, base_url=f"https://chat.openai.com{self._path}"
         ) as client:
-            resp = await client.get("/models")
+            resp = await client.get(
+                "/models", headers={"authorization": f"Bearer {self.access_token}"}
+            )
             if resp.status_code in (200, 401):
                 logger.info(f"Check passed, status code: {resp.status_code}")
+                puid = resp.cookies.get("_puid")
+                if puid:
+                    logger.info(f"puid: {puid[:15]}...{puid[30:40]}...")
+                    self.puid = puid
                 self.valid_state = True
                 return True
             elif resp.status_code == 403:

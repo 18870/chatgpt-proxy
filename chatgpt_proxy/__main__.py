@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 
@@ -17,8 +18,8 @@ logger = logging.getLogger(__name__)
 
 
 class Settings(BaseSettings):
-    cf_clearance: str
-    user_agent: str
+    cf_clearance: str = None
+    user_agent: str = None
 
     access_token: str = None
     host: str = "127.0.0.1"
@@ -41,7 +42,7 @@ if __name__ == "__main__":
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
-        await proxy.check_cf()
+        asyncio.create_task(proxy._refresh_task())
         yield
 
     app = FastAPI(lifespan=lifespan)
