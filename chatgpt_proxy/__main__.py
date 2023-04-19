@@ -18,8 +18,9 @@ logger = logging.getLogger(__name__)
 
 
 class Settings(BaseSettings):
-    cf_clearance: str = None
-    user_agent: str = None
+    cf_clearance: str = ""
+    user_agent: str = ""
+    puid: str = ""
 
     access_token: str = None
     host: str = "127.0.0.1"
@@ -36,6 +37,7 @@ if __name__ == "__main__":
     proxy = WebChatGPTProxy(
         cf_clearance=env.cf_clearance,
         user_agent=env.user_agent,
+        puid=env.puid,
         access_token=env.access_token,
         trust=env.trust,
     )

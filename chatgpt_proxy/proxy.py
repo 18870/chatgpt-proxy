@@ -114,8 +114,8 @@ class WebChatGPTProxy(ReverseProxy):
         self,
         cf_clearance: str,
         user_agent: str,
+        puid: str,
         access_token: Optional[str] = None,
-        puid: Optional[str] = None,
         trust: bool = False,
     ) -> None:
         """
