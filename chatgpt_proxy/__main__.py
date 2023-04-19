@@ -1,4 +1,3 @@
-import asyncio
 import logging
 from contextlib import asynccontextmanager
 
@@ -42,32 +41,51 @@ if __name__ == "__main__":
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
-        refresh_puid_task = asyncio.create_task(proxy._refresh_task())
+        await proxy.check_cf()
         yield
 
     app = FastAPI(lifespan=lifespan)
     proxy.attach(app, path="/backend-api")
 
     if env.mod_access_token:
-        logger.info("Mod access token found, enable /moderation/update_info endpoint")
+        logger.info("Mod access token found, enable /moderation/* endpoint")
 
         class Info(BaseModel):
             cf_clearance: str = None
             access_token: str = None
+            user_agent: str = None
 
         @app.post("/moderation/update_info", status_code=200)
-        async def update_info(info: Info, authorization: str = Header(...)):
-            if authorization == env.mod_access_token:
-                if info.access_token:
-                    logger.info("New access token found")
-                    proxy.access_token = info.access_token
-                if info.cf_clearance:
-                    logger.info(f"New cf_clearance: {info.cf_clearance}")
-                    proxy.cf_clearance = info.cf_clearance
-            if await proxy._refresh_puid():
-                logger.info("New info is validated")
+        async def update_info(
+            info: Info,
+            authorization: str = Header(...),
+            user_agent: str = Header(...),
+        ):
+            if authorization != env.mod_access_token:
+                logger.error("Invalid authorization")
+                return {"message": "invalid authorization"}
+
+            if info.access_token:
+                logger.info("New access token found")
+                proxy.access_token = info.access_token
+            if info.cf_clearance:
+                logger.info(f"New cf_clearance: {info.cf_clearance}")
+                proxy.cf_clearance = info.cf_clearance
+            proxy.user_agent = info.user_agent or user_agent
+
+            if await proxy.check_cf():
+                logger.info("New info is valid")
+                return {"message": "ok"}
             else:
                 logger.error("Failed to validate new info")
-            return {"status": "ok"}
+                return {"message": "failed"}
+
+        @app.get("/moderation/status", status_code=200)
+        async def status(authorization: str = Header(...)):
+            if authorization != env.mod_access_token:
+                logger.error("Invalid authorization")
+                return {"message": "invalid authorization"}
+
+            return {"message": "ok", "status": proxy.valid_state}
 
     uvicorn.run(app, host=env.host, port=env.port)

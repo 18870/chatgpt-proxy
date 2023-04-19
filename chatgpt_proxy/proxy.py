@@ -27,6 +27,7 @@ class ReverseProxy:
     def __init__(self, base_url: str) -> None:
         self.base_url = base_url
         self.client = httpx.AsyncClient(base_url=base_url)
+
         _url = urlparse(base_url)
         self._domain = _url.netloc
         self._origin = urlunparse(
@@ -39,6 +40,11 @@ class ReverseProxy:
                 fragment="",
             )
         )
+        self._preset_headers = {
+            "host": self._domain,
+            "origin": self._origin,
+            "referer": self.base_url,
+        }
 
     async def _prepare_cookies(self, request: Request):
         return request.cookies.copy()
@@ -52,10 +58,11 @@ class ReverseProxy:
         headers.pop("cookie", None)
 
         # preset header
-        headers["host"] = self._domain
-        headers["origin"] = self._origin
-        headers["referer"] = self.base_url
+        headers.update(self._preset_headers)
         return headers
+
+    async def _process_response(self, response: httpx.Response):
+        pass
 
     async def proxy(self, request: Request, path: str):
         # https://github.com/tiangolo/fastapi/discussions/7382#discussioncomment-5136454
@@ -68,6 +75,8 @@ class ReverseProxy:
             cookies=await self._prepare_cookies(request),
             content=request.stream(),
         )
+
+        await self._process_response(rp_resp)
 
         # Handle Set-Cookie headers
         headers = rp_resp.headers.copy()
@@ -102,7 +111,11 @@ class ReverseProxy:
 
 class WebChatGPTProxy(ReverseProxy):
     def __init__(
-        self, cf_clearance: str, user_agent: str, access_token: Optional[str] = None, trust: bool = False
+        self,
+        cf_clearance: str,
+        user_agent: str,
+        access_token: Optional[str] = None,
+        trust: bool = False,
     ) -> None:
         """
         :param puid: from `_puid` cookie
@@ -115,11 +128,12 @@ class WebChatGPTProxy(ReverseProxy):
         """
         super().__init__(base_url="https://chat.openai.com/backend-api/")
         self.cf_clearance = cf_clearance
-        self.ua = user_agent
+        self.user_agent = user_agent
         self.access_token = access_token
         self.trust = trust
         self._app: Optional[FastAPI] = None
         self._path: Optional[str] = None
+        self.valid_state = False
 
     async def _prepare_cookies(self, request: Request):
         cookies = await super()._prepare_cookies(request)
@@ -128,18 +142,24 @@ class WebChatGPTProxy(ReverseProxy):
 
     async def _prepare_headers(self, request: Request):
         headers = await super()._prepare_headers(request)
-        headers["origin"] = "https://chat.openai.com"
         headers["referer"] = "https://chat.openai.com"
-        headers["user-agent"] = self.ua
+        headers["user-agent"] = self.user_agent
         if self.trust and self.access_token:
             headers.setdefault("authorization", f"Bearer {self.access_token}")
         return headers
 
+    async def _process_response(self, response: httpx.Response):
+        if response.status_code == 200:
+            self.valid_state = True
+        elif response.status_code == 403:
+            logger.error("403 Forbidden found")
+            self.valid_state = False
+
     async def _refresh_puid(self) -> bool:
         """
         Send requests to /models through reverse proxy (current FastAPI app) to get a new puid
-        
-        Use to see if you pass cloudflare
+
+        Deprecated
         """
         if self._app is None:
             logger.info("Not attached to any FastAPI app, skip")
@@ -161,6 +181,9 @@ class WebChatGPTProxy(ReverseProxy):
                 return False
 
     async def _refresh_task(self) -> None:
+        """
+        Deprecated
+        """
         if self.access_token is None:
             logger.info("access_token not found, skip")
             return
@@ -172,6 +195,22 @@ class WebChatGPTProxy(ReverseProxy):
             # await asyncio.sleep(60 * 60)
             # continue
         # await asyncio.sleep(60 * 60 * 6)
+
+    async def check_cf(self) -> bool:
+        if self._app is None:
+            logger.info("Not attached to any FastAPI app, cannot perform check")
+        async with httpx.AsyncClient(
+            app=self._app, base_url=f"https://chat.openai.com{self._path}"
+        ) as client:
+            resp = await client.get("/models")
+            if resp.status_code in (200, 401):
+                logger.info(f"Check passed, status code: {resp.status_code}")
+                self.valid_state = True
+                return True
+            elif resp.status_code == 403:
+                logger.error(f"Check failed, status code 403")
+                logger.error(f"Response: \n{resp.text}")
+                return False
 
     def attach(self, app: FastAPI, path: str) -> None:
         super().attach(app=app, path=path, include_in_schema=self.trust)
