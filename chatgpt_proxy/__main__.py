@@ -18,9 +18,9 @@ logger = logging.getLogger(__name__)
 
 
 class Settings(BaseSettings):
-    cf_clearance: str = ""
+    cf_clearance: str = None
     user_agent: str = ""
-    puid: str = ""
+    puid: str = None
 
     access_token: str = None
     host: str = "127.0.0.1"

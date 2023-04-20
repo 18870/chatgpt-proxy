@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from typing import Optional
 from urllib.parse import urlparse, urlunparse, ParseResult
@@ -141,8 +142,10 @@ class WebChatGPTProxy(ReverseProxy):
 
     async def _prepare_cookies(self, request: Request):
         cookies = await super()._prepare_cookies(request)
-        cookies.setdefault("cf_clearance", self.cf_clearance)
-        cookies.setdefault("_puid", self.puid)
+        if self.cf_clearance is not None:
+            cookies.setdefault("cf_clearance", self.cf_clearance)
+        if self.puid is not None:
+            cookies.setdefault("_puid", self.puid)
         return cookies
 
     async def _prepare_headers(self, request: Request):
@@ -189,14 +192,14 @@ class WebChatGPTProxy(ReverseProxy):
         if self.access_token is None:
             logger.info("access_token not found, skip")
             return
-
-        try:
-            await self.check_cf()
-        except Exception as e:
-            logger.exception(e)
-            # await asyncio.sleep(60 * 60)
-            # continue
-        # await asyncio.sleep(60 * 60 * 6)
+        while True:
+            try:
+                await self.check_cf()
+            except Exception as e:
+                logger.exception(e)
+                await asyncio.sleep(60 * 60)
+                continue
+            await asyncio.sleep(60 * 60 * 6)
 
     async def check_cf(self) -> bool:
         if self._app is None:
