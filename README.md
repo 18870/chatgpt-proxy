@@ -5,6 +5,11 @@ Use cookie `cf_clearance` to pass Cloudflare browser check
 
 **`_puid` no longer works**
 
+## Demo
+https://cproxy.koudasuzu.top/backend-api/
+
+No rate limit applied for now.
+
 ## Requirements
 - Access to chat.openai.com
 
@@ -12,9 +17,6 @@ Use cookie `cf_clearance` to pass Cloudflare browser check
 `pip install chatgpt-proxy`
 
 ## Usage
-
-For how to get a usable `cf_clearance` cookie, checkout issue [#1](https://github.com/18870/chatgpt-proxy/issues/1) (Chinese only sorry)
-
 ### Run as a service
 Set these environment variables:
 - `CF_CLEARANCE`: (Optional) Cookie `cf_clearance`
