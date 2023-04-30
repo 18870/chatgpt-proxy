@@ -1,14 +1,12 @@
+# Notice
+This project **does NOT works** until further notice
+
 # ChatGPT-Proxy
 Python version of OpenAI's ChatGPT web API proxy  
 Python alternative of [ChatGPT-Proxy-V4](https://github.com/acheong08/ChatGPT-Proxy-V4)  
 Use cookie `cf_clearance` to pass Cloudflare browser check  
 
 **`_puid` no longer works**
-
-## Demo
-https://cproxy.koudasuzu.top/backend-api/
-
-No rate limit applied for now.
 
 ## Requirements
 - Access to chat.openai.com
